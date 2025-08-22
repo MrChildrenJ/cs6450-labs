@@ -114,16 +114,32 @@ func main() {
 	resultsCh := make(chan uint64)
 
 	host := hosts[0]
-	clientId := 0
-	go func(clientId int) {
-		workload := kvs.NewWorkload(*workload, *theta)
-		runClient(clientId, host, &done, workload, resultsCh)
-	}(clientId)
+	// clientId := 0
+
+	// go func(clientId int) {
+	// 	workload := kvs.NewWorkload(*workload, *theta)
+	// 	runClient(clientId, host, &done, workload, resultsCh)
+	// }(clientId)
+
+	// Mod1: Use multiple concurrent clients
+	numClients := 8
+	for i := 0; i < numClients; i++ {
+		go func(clientId int) {
+			workload := kvs.NewWorkload(*workload, *theta)
+			runClient(clientId, host, &done, workload, resultsCh)
+		}(i)
+	}
 
 	time.Sleep(time.Duration(*secs) * time.Second)
 	done.Store(true)
 
-	opsCompleted := <-resultsCh
+	// opsCompleted := <-resultsCh
+
+	// Mod1: Collect results from all clients
+	opsCompleted := uint64(0)
+	for i := 0; i < numClients; i++ {
+		opsCompleted += <-resultsCh
+	}
 
 	elapsed := time.Since(start)
 
